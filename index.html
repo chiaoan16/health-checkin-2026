@@ -283,7 +283,7 @@
 
 <script>
 /* ============ 設定區 ============ */
-const WEBAPP_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE"; // 部署 Apps Script 後貼上網址
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzY3CqZVOKtlh61smes2FXFpeGZ10VqMUWzARuIXV3ISC8vHPxYE8DOEA5wiE-F8Pp4zg/exec"; // 部署 Apps Script 後貼上網址
 const TARGET_LAT = 25.0750419;
 const TARGET_LNG = 121.5750181;
 const GEOFENCE_METERS = 300; // 允許誤差半徑(公尺),超過標記警示但仍可打卡
@@ -333,7 +333,14 @@ async function sendToServer(payload){
     headers: { "Content-Type": "text/plain;charset=utf-8" }, // 避免 CORS preflight
     body: JSON.stringify(payload)
   });
-  return res.json();
+  if(!res.ok){
+    throw new Error("HTTP " + res.status);
+  }
+  const json = await res.json();
+  if(json && json.ok === false){
+    throw new Error(json.error || "後端回傳錯誤");
+  }
+  return json;
 }
 
 /* ============ 畫面渲染 ============ */
@@ -580,7 +587,7 @@ async function handleCheckpoint(type){
   try{
     await sendToServer(payload);
   }catch(e){
-    setStatus("⚠️ 傳送失敗，請確認網路後重試", true);
+    setStatus("⚠️ 傳送失敗：" + e.message, true);
     return;
   }
 
@@ -607,7 +614,7 @@ async function handleReturn(type){
   try{
     await sendToServer(payload);
   }catch(e){
-    setStatus("⚠️ 傳送失敗，請確認網路後重試", true);
+    setStatus("⚠️ 傳送失敗：" + e.message, true);
     return;
   }
   state.finalStatus = type;
@@ -638,7 +645,7 @@ async function handleLeaveRequest(){
   try{
     await sendToServer(payload);
   }catch(e){
-    setStatus("⚠️ 傳送失敗，請確認網路後重試", true);
+    setStatus("⚠️ 傳送失敗：" + e.message, true);
     return;
   }
   state.finalStatus = "leaveRequest";
