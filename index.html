@@ -237,6 +237,9 @@
   .leave-form.open{ display:block; }
   .time-row{ display:flex; gap:10px; }
   .time-row .field{ flex:1; margin-bottom:14px; }
+  .time-select-row{ display:flex; align-items:center; gap:6px; }
+  .time-select-row select{ flex:1; padding:13px 10px; text-align:center; }
+  .time-colon{ font-weight:700; color:var(--text-mute); font-family:'JetBrains Mono', monospace; }
   .field{ margin-bottom:14px; }
 
   .done-screen{ text-align:center; padding:8px 0 4px; }
@@ -484,6 +487,23 @@ function renderLeaveStep(){
   document.getElementById("leaveBtn").onclick = () => handleCheckpoint("leave");
 }
 
+function hourOptions(){
+  let html = '<option value="" disabled selected>時</option>';
+  for(let h = 0; h < 24; h++){
+    const v = String(h).padStart(2,"0");
+    html += `<option value="${v}">${v}</option>`;
+  }
+  return html;
+}
+function minuteOptions(){
+  let html = '<option value="" disabled selected>分</option>';
+  for(let m = 0; m < 60; m += 5){
+    const v = String(m).padStart(2,"0");
+    html += `<option value="${v}">${v}</option>`;
+  }
+  return html;
+}
+
 function renderReturnStep(){
   card.innerHTML = `
     <div class="summary">
@@ -502,11 +522,19 @@ function renderReturnStep(){
       <div class="time-row">
         <div class="field">
           <label>請假起始時間</label>
-          <input type="time" id="leaveStart">
+          <div class="time-select-row">
+            <select id="leaveStartHour">${hourOptions()}</select>
+            <span class="time-colon">:</span>
+            <select id="leaveStartMin">${minuteOptions()}</select>
+          </div>
         </div>
         <div class="field">
           <label>請假結束時間</label>
-          <input type="time" id="leaveEnd">
+          <div class="time-select-row">
+            <select id="leaveEndHour">${hourOptions()}</select>
+            <span class="time-colon">:</span>
+            <select id="leaveEndMin">${minuteOptions()}</select>
+          </div>
         </div>
       </div>
       <div class="field">
@@ -624,13 +652,17 @@ async function handleReturn(type){
 }
 
 async function handleLeaveRequest(){
-  const start = document.getElementById("leaveStart").value;
-  const end = document.getElementById("leaveEnd").value;
+  const startH = document.getElementById("leaveStartHour").value;
+  const startM = document.getElementById("leaveStartMin").value;
+  const endH = document.getElementById("leaveEndHour").value;
+  const endM = document.getElementById("leaveEndMin").value;
   const reason = document.getElementById("leaveReason").value.trim();
-  if(!start || !end || !reason){
+  if(!startH || !startM || !endH || !endM || !reason){
     setStatus("請完整填寫請假起訖時間與事由", true);
     return;
   }
+  const start = startH + ":" + startM;
+  const end = endH + ":" + endM;
   setStatus("送出紀錄中…", false, true);
   const payload = {
     action: "leaveRequest",
