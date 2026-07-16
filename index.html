@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>健檢往返打卡</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#152A43;
+    --navy-deep:#0D1B2E;
+    --teal:#3E8E7E;
+    --teal-light:#DCEBE7;
+    --amber:#C9722E;
+    --amber-light:#F6E3D2;
+    --bg:#EEF2F1;
+    --card:#FFFFFF;
+    --line:#D7DEDC;
+    --text:#16233A;
+    --text-mute:#5B6B76;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    background-image:
+      radial-gradient(circle at 10% 0%, rgba(62,142,126,0.10), transparent 45%),
+      radial-gradient(circle at 90% 100%, rgba(21,42,67,0.08), transparent 45%);
+    font-family:'Noto Sans TC', sans-serif;
+    color:var(--text);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:28px 16px 60px;
+  }
+  .app{
+    width:100%;
+    max-width:440px;
+  }
+  .brand{
+    text-align:center;
+    margin-bottom:22px;
+  }
+  .brand .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:.14em;
+    color:var(--teal);
+    font-weight:700;
+    text-transform:uppercase;
+  }
+  .brand h1{
+    font-size:22px;
+    font-weight:900;
+    margin:6px 0 0;
+    color:var(--navy-deep);
+  }
+
+  /* ---- Route stepper (signature element) ---- */
+  .route{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    margin:26px 4px 30px;
+    position:relative;
+  }
+  .route .track{
+    position:absolute;
+    top:15px;
+    left:32px;
+    right:32px;
+    height:3px;
+    background:var(--line);
+    z-index:0;
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .route .track-fill{
+    height:100%;
+    width:0%;
+    background:var(--teal);
+    transition:width .5s ease;
+  }
+  .station{
+    position:relative;
+    z-index:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    width:33.33%;
+  }
+  .station .dot{
+    width:32px;height:32px;border-radius:50%;
+    background:var(--card);
+    border:3px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;
+    transition:all .3s ease;
+  }
+  .station.done .dot{
+    border-color:var(--teal);
+    background:var(--teal);
+    color:#fff;
+  }
+  .station.active .dot{
+    border-color:var(--navy);
+    background:var(--navy);
+    box-shadow:0 0 0 5px rgba(21,42,67,0.14);
+  }
+  .station .label{
+    font-size:12px;
+    margin-top:8px;
+    color:var(--text-mute);
+    font-weight:500;
+    text-align:center;
+    line-height:1.3;
+  }
+  .station.active .label{ color:var(--navy); font-weight:700; }
+  .station.done .label{ color:var(--teal); font-weight:700; }
+
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:26px 22px;
+    box-shadow:0 10px 30px -12px rgba(13,27,46,0.18);
+    border:1px solid rgba(21,42,67,0.06);
+  }
+  .field label{
+    display:block;
+    font-size:13px;
+    font-weight:700;
+    color:var(--navy);
+    margin-bottom:8px;
+  }
+  select{
+    width:100%;
+    padding:13px 14px;
+    border-radius:10px;
+    border:1.5px solid var(--line);
+    font-size:16px;
+    font-family:inherit;
+    color:var(--text);
+    background:#FBFBFA;
+    appearance:none;
+    -webkit-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235B6B76' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;
+    background-position:right 14px center;
+    background-size:18px;
+  }
+  input[type=text], input[type=time], textarea{
+    width:100%;
+    padding:13px 14px;
+    border-radius:10px;
+    border:1.5px solid var(--line);
+    font-size:16px;
+    font-family:inherit;
+    color:var(--text);
+    background:#FBFBFA;
+  }
+  input:focus, textarea:focus, button:focus-visible{
+    outline:3px solid rgba(62,142,126,0.35);
+    border-color:var(--teal);
+  }
+  textarea{ resize:vertical; min-height:70px; }
+
+  .btn{
+    width:100%;
+    border:none;
+    border-radius:12px;
+    padding:17px 16px;
+    font-size:16px;
+    font-weight:700;
+    font-family:inherit;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+  }
+  .btn:active{ transform:scale(0.98); }
+  .btn-primary{ background:var(--navy); color:#fff; box-shadow:0 8px 18px -8px rgba(21,42,67,0.55);}
+  .btn-teal{ background:var(--teal); color:#fff; box-shadow:0 8px 18px -8px rgba(62,142,126,0.55);}
+  .btn-outline{ background:#fff; color:var(--navy); border:2px solid var(--navy); }
+  .btn-amber{ background:#fff; color:var(--amber); border:2px solid var(--amber); }
+  .btn-icon{ font-size:20px; }
+  .btn[disabled]{ opacity:.45; cursor:not-allowed; }
+  .btn-row{ display:flex; flex-direction:column; gap:12px; margin-top:6px; }
+
+  .status-line{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    color:var(--text-mute);
+    margin-top:14px;
+    justify-content:center;
+    min-height:18px;
+  }
+  .status-line.error{ color:var(--amber); }
+  .spinner{
+    width:14px;height:14px;border-radius:50%;
+    border:2px solid var(--line);
+    border-top-color:var(--teal);
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .summary{
+    background:var(--teal-light);
+    border-radius:12px;
+    padding:14px 16px;
+    margin-bottom:18px;
+  }
+  .summary-row{
+    display:flex; justify-content:space-between;
+    font-size:14px; padding:5px 0;
+    font-family:'JetBrains Mono', monospace;
+  }
+  .summary-row span:first-child{ color:var(--navy); font-weight:700; font-family:'Noto Sans TC', sans-serif;}
+  .summary-row span:last-child{ color:var(--text); }
+
+  .hint{
+    font-size:12.5px;
+    color:var(--text-mute);
+    text-align:center;
+    margin-top:16px;
+    line-height:1.7;
+  }
+  .hint div + div{ margin-top:2px; }
+  .leave-form{ display:none; margin-top:16px; }
+  .leave-form.open{ display:block; }
+  .time-row{ display:flex; gap:10px; }
+  .time-row .field{ flex:1; margin-bottom:14px; }
+  .field{ margin-bottom:14px; }
+
+  .done-screen{ text-align:center; padding:8px 0 4px; }
+  .done-screen .big-check{
+    width:64px;height:64px;border-radius:50%;
+    background:var(--teal); color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:32px; margin:0 auto 16px;
+  }
+  .done-screen h2{ font-size:19px; margin:0 0 6px; color:var(--navy-deep);}
+  .done-screen p{ font-size:14px; color:var(--text-mute); margin:0 0 20px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="brand">
+    <div class="eyebrow">Health Checkup · Travel Log</div>
+    <h1>健檢往返打卡</h1>
+  </div>
+
+  <div class="route">
+    <div class="track"><div class="track-fill" id="trackFill"></div></div>
+    <div class="station" id="stationArrive">
+      <div class="dot">🏥</div>
+      <div class="label">抵達<br>健檢中心</div>
+    </div>
+    <div class="station" id="stationLeave">
+      <div class="dot">✅</div>
+      <div class="label">離開<br>健檢中心</div>
+    </div>
+    <div class="station" id="stationReturn">
+      <div class="dot">🏁</div>
+      <div class="label">返回<br>公司/住家</div>
+    </div>
+  </div>
+
+  <div class="card" id="card"></div>
+
+  <div class="hint" id="globalHint">
+    <div>健檢期間屬公假。</div>
+    <div>返回公司/住家需在系統時間內完成，逾時將由人資另行確認。</div>
+  </div>
+</div>
+
+<script>
+/* ============ 設定區 ============ */
+const WEBAPP_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE"; // 部署 Apps Script 後貼上網址
+const TARGET_LAT = 25.0750419;
+const TARGET_LNG = 121.5750181;
+const GEOFENCE_METERS = 300; // 允許誤差半徑(公尺),超過標記警示但仍可打卡
+
+/* ============ 狀態管理 ============ */
+const todayKey = () => new Date().toISOString().slice(0,10);
+const storeKey = () => "checkin_" + todayKey();
+
+function loadState(){
+  try{ return JSON.parse(localStorage.getItem(storeKey())) || {}; }
+  catch(e){ return {}; }
+}
+function saveState(s){ localStorage.setItem(storeKey(), JSON.stringify(s)); }
+
+let state = loadState();
+
+/* ============ 工具函式 ============ */
+function haversine(lat1, lng1, lat2, lng2){
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2-lat1), dLng = toRad(lng2-lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function nowTimeStr(){
+  const d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+
+         String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")+":"+String(d.getSeconds()).padStart(2,"0");
+}
+function nowDisplay(){
+  const d = new Date();
+  return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+}
+function getLocation(){
+  return new Promise((resolve, reject) => {
+    if(!navigator.geolocation){ reject(new Error("此裝置不支援定位")); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({lat: pos.coords.latitude, lng: pos.coords.longitude}),
+      err => reject(err),
+      { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
+    );
+  });
+}
+async function sendToServer(payload){
+  const res = await fetch(WEBAPP_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" }, // 避免 CORS preflight
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+/* ============ 畫面渲染 ============ */
+const card = document.getElementById("card");
+
+function updateStepper(){
+  const map = { name:0, arrive:1, leave:2, done:3 };
+  let step = 0;
+  if(state.name) step = 1;
+  if(state.arriveTime) step = 2;
+  if(state.leaveTime) step = 3;
+  if(state.finalStatus) step = 4;
+
+  const stations = [
+    document.getElementById("stationArrive"),
+    document.getElementById("stationLeave"),
+    document.getElementById("stationReturn")
+  ];
+  stations.forEach((el, i) => {
+    el.classList.remove("done","active");
+    if(step > i+1) el.classList.add("done");
+    else if(step === i+1) el.classList.add("active");
+  });
+  const fillPct = step<=1 ? 0 : step===2 ? 50 : 100;
+  document.getElementById("trackFill").style.width = fillPct + "%";
+}
+
+function render(){
+  updateStepper();
+
+  if(!state.name || !state.company){ return renderNameStep(); }
+  if(!state.arriveTime){ return renderArriveStep(); }
+  if(!state.leaveTime){ return renderLeaveStep(); }
+  if(!state.finalStatus){ return renderReturnStep(); }
+  return renderDoneStep();
+}
+
+function renderNameStep(){
+  const companyOptions = ["展旺","遠鑫","毛毛蟲"].map(c =>
+    `<option value="${c}" ${state.company===c ? "selected" : ""}>${c}</option>`
+  ).join("");
+  card.innerHTML = `
+    <div class="field">
+      <label>請選擇公司</label>
+      <select id="companyInput">
+        <option value="" disabled ${state.company ? "" : "selected"}>請選擇</option>
+        ${companyOptions}
+      </select>
+    </div>
+    <div class="field">
+      <label>請輸入您的中文姓名</label>
+      <input type="text" id="nameInput" placeholder="例如：林安喬" autocomplete="name" value="${state.name || ""}">
+    </div>
+    <button class="btn btn-primary" id="startBtn"><span class="btn-icon">▶</span>確認</button>
+    <div class="status-line" id="statusLine"></div>
+  `;
+  document.getElementById("startBtn").onclick = () => startSession();
+}
+
+async function startSession(){
+  const company = document.getElementById("companyInput").value;
+  const name = document.getElementById("nameInput").value.trim();
+  if(!company){ setStatus("請先選擇公司", true); return; }
+  if(!name){ setStatus("請先輸入姓名", true); return; }
+
+  setStatus("正在確認您今天的打卡進度…", false, true);
+
+  let serverState = null;
+  try{
+    serverState = await fetchStatus(company, name);
+  }catch(e){
+    // 查詢失敗不擋流程，仍以本機紀錄或新流程繼續
+  }
+
+  state.company = company;
+  state.name = name;
+
+  if(serverState && serverState.found){
+    applyServerState(serverState);
+  }
+
+  saveState(state);
+  setStatus("");
+  render();
+}
+
+async function fetchStatus(company, name){
+  const url = WEBAPP_URL + "?action=status&date=" + encodeURIComponent(todayKey())
+    + "&company=" + encodeURIComponent(company) + "&name=" + encodeURIComponent(name);
+  const res = await fetch(url);
+  return res.json();
+}
+
+function applyServerState(s){
+  if(s.arriveTime){
+    state.arriveTime = s.arriveTime;
+    state.arriveDisplay = displayFromTimestamp(s.arriveTime);
+  }
+  if(s.leaveTime){
+    state.leaveTime = s.leaveTime;
+    state.leaveDisplay = displayFromTimestamp(s.leaveTime);
+  }
+  if(s.finalStatus){
+    state.finalStatus = s.finalStatus;
+    if(s.finalStatus === "leaveRequest" && s.leaveStart && s.leaveEnd){
+      state.returnDisplay = s.leaveStart + " - " + s.leaveEnd;
+    }else if(s.returnTime){
+      state.returnDisplay = displayFromTimestamp(s.returnTime);
+    }
+  }
+}
+
+function displayFromTimestamp(ts){
+  // ts 格式："yyyy-MM-dd HH:mm:ss"
+  const parts = String(ts).split(" ");
+  return parts[1] ? parts[1].slice(0,5) : ts;
+}
+
+function renderArriveStep(){
+  card.innerHTML = `
+    <div class="summary">
+      <div class="summary-row"><span>所屬公司</span><span>${state.company}</span></div>
+      <div class="summary-row"><span>同仁姓名</span><span>${state.name}</span></div>
+    </div>
+    <button class="btn btn-navy btn-primary" id="arriveBtn"><span class="btn-icon">🏥</span>抵達健檢中心</button>
+    <div class="status-line" id="statusLine"></div>
+  `;
+  document.getElementById("arriveBtn").onclick = () => handleCheckpoint("arrive");
+}
+
+function renderLeaveStep(){
+  card.innerHTML = `
+    <div class="summary">
+      <div class="summary-row"><span>所屬公司</span><span>${state.company}</span></div>
+      <div class="summary-row"><span>同仁姓名</span><span>${state.name}</span></div>
+      <div class="summary-row"><span>抵達時間</span><span>${state.arriveDisplay}</span></div>
+    </div>
+    <button class="btn btn-primary" id="leaveBtn"><span class="btn-icon">✅</span>離開健檢中心</button>
+    <div class="status-line" id="statusLine"></div>
+  `;
+  document.getElementById("leaveBtn").onclick = () => handleCheckpoint("leave");
+}
+
+function renderReturnStep(){
+  card.innerHTML = `
+    <div class="summary">
+      <div class="summary-row"><span>所屬公司</span><span>${state.company}</span></div>
+      <div class="summary-row"><span>同仁姓名</span><span>${state.name}</span></div>
+      <div class="summary-row"><span>抵達時間</span><span>${state.arriveDisplay}</span></div>
+      <div class="summary-row"><span>離開時間</span><span>${state.leaveDisplay}</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-teal" id="returnOfficeBtn"><span class="btn-icon">🏢</span>返回公司</button>
+      <button class="btn btn-outline" id="returnHomeBtn"><span class="btn-icon">🏠</span>返回住家</button>
+      <button class="btn btn-amber" id="leaveRequestBtn"><span class="btn-icon">📝</span>健檢後請假</button>
+    </div>
+
+    <div class="leave-form" id="leaveForm">
+      <div class="time-row">
+        <div class="field">
+          <label>請假起始時間</label>
+          <input type="time" id="leaveStart">
+        </div>
+        <div class="field">
+          <label>請假結束時間</label>
+          <input type="time" id="leaveEnd">
+        </div>
+      </div>
+      <div class="field">
+        <label>請假事由</label>
+        <textarea id="leaveReason" placeholder="請簡述請假事由"></textarea>
+      </div>
+      <button class="btn btn-amber" id="submitLeaveBtn"><span class="btn-icon">📩</span>送出請假紀錄</button>
+    </div>
+
+    <div class="status-line" id="statusLine"></div>
+  `;
+  document.getElementById("returnOfficeBtn").onclick = () => handleReturn("returnOffice");
+  document.getElementById("returnHomeBtn").onclick = () => handleReturn("returnHome");
+  document.getElementById("leaveRequestBtn").onclick = () => {
+    document.getElementById("leaveForm").classList.add("open");
+  };
+  document.getElementById("submitLeaveBtn").onclick = () => handleLeaveRequest();
+}
+
+function renderDoneStep(){
+  const statusLabel = {
+    returnOffice: "🏢 已返回公司",
+    returnHome: "🏠 已返回住家",
+    leaveRequest: "📝 已登記請假"
+  }[state.finalStatus] || "已完成";
+
+  card.innerHTML = `
+    <div class="done-screen">
+      <div class="big-check">✓</div>
+      <h2>打卡紀錄已送出</h2>
+      <p>感謝您完成健檢往返登記</p>
+    </div>
+    <div class="summary">
+      <div class="summary-row"><span>所屬公司</span><span>${state.company}</span></div>
+      <div class="summary-row"><span>同仁姓名</span><span>${state.name}</span></div>
+      <div class="summary-row"><span>抵達時間</span><span>${state.arriveDisplay}</span></div>
+      <div class="summary-row"><span>離開時間</span><span>${state.leaveDisplay}</span></div>
+      <div class="summary-row"><span>最終狀態</span><span>${statusLabel}</span></div>
+      ${state.returnDisplay ? `<div class="summary-row"><span>登記時間</span><span>${state.returnDisplay}</span></div>` : ""}
+    </div>
+    <div class="status-line">如有疑問請聯繫人資窗口</div>
+  `;
+}
+
+function setStatus(msg, isError=false, loading=false){
+  const el = document.getElementById("statusLine");
+  if(!el) return;
+  el.className = "status-line" + (isError ? " error" : "");
+  el.innerHTML = (loading ? '<span class="spinner"></span>' : '') + msg;
+}
+
+/* ============ 動作處理 ============ */
+async function handleCheckpoint(type){
+  setStatus("定位中，請允許位置權限…", false, true);
+  let gps = null;
+  try{
+    gps = await getLocation();
+  }catch(e){
+    setStatus("⚠️ 無法取得定位，仍會記錄打卡時間", true);
+  }
+
+  const distance = gps ? Math.round(haversine(gps.lat, gps.lng, TARGET_LAT, TARGET_LNG)) : null;
+  const gpsStatus = gps ? (distance <= GEOFENCE_METERS ? "通過" : "警示") : "無定位資料";
+
+  setStatus("送出紀錄中…", false, true);
+  const payload = {
+    action: type,
+    company: state.company,
+    name: state.name,
+    date: todayKey(),
+    timestamp: nowTimeStr(),
+    lat: gps ? gps.lat : "",
+    lng: gps ? gps.lng : "",
+    distance: distance,
+    gpsStatus: gpsStatus
+  };
+
+  try{
+    await sendToServer(payload);
+  }catch(e){
+    setStatus("⚠️ 傳送失敗，請確認網路後重試", true);
+    return;
+  }
+
+  if(type === "arrive"){
+    state.arriveTime = payload.timestamp;
+    state.arriveDisplay = nowDisplay();
+  }else{
+    state.leaveTime = payload.timestamp;
+    state.leaveDisplay = nowDisplay();
+  }
+  saveState(state);
+  render();
+}
+
+async function handleReturn(type){
+  setStatus("送出紀錄中…", false, true);
+  const payload = {
+    action: type,
+    company: state.company,
+    name: state.name,
+    date: todayKey(),
+    timestamp: nowTimeStr()
+  };
+  try{
+    await sendToServer(payload);
+  }catch(e){
+    setStatus("⚠️ 傳送失敗，請確認網路後重試", true);
+    return;
+  }
+  state.finalStatus = type;
+  state.returnDisplay = nowDisplay();
+  saveState(state);
+  render();
+}
+
+async function handleLeaveRequest(){
+  const start = document.getElementById("leaveStart").value;
+  const end = document.getElementById("leaveEnd").value;
+  const reason = document.getElementById("leaveReason").value.trim();
+  if(!start || !end || !reason){
+    setStatus("請完整填寫請假起訖時間與事由", true);
+    return;
+  }
+  setStatus("送出紀錄中…", false, true);
+  const payload = {
+    action: "leaveRequest",
+    company: state.company,
+    name: state.name,
+    date: todayKey(),
+    timestamp: nowTimeStr(),
+    leaveStart: start,
+    leaveEnd: end,
+    leaveReason: reason
+  };
+  try{
+    await sendToServer(payload);
+  }catch(e){
+    setStatus("⚠️ 傳送失敗，請確認網路後重試", true);
+    return;
+  }
+  state.finalStatus = "leaveRequest";
+  state.returnDisplay = start + " - " + end;
+  saveState(state);
+  render();
+}
+
+/* ============ 初始化 ============ */
+render();
+</script>
+</body>
+</html>
